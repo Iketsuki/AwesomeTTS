@@ -242,6 +242,16 @@ class Reviewer(object):
         if not text:
             return
 
+        # Starting with this tag, check for 'speak' and 'mute' control classes
+        # in the hierarchy. The innermost control class takes precedence over
+        # any outer classes. If neither is found, this tag will play normally.
+        for control_tag in [tag] + tag.findParents():
+            control_classes = dict(control_tag.attrs).get('class', '').split()
+            if 'speak' in control_classes:
+                break
+            elif 'mute' in control_classes:
+                return
+
         attr = dict(tag.attrs)
         config = self._addon.config
 
