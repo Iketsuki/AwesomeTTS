@@ -238,19 +238,36 @@ class Reviewer(object):
                        show_errors=True):
         """Helper method for _play_html()."""
 
-        text = from_template(unicode(tag))
+        def get_text_from_tag(start_tag):
+            """
+            Starting with this tag, check for 'speak' and 'mute' control
+            classes in the hierarchy. The innermost control class takes
+            precedence over any outer classes. If neither is found, this
+            tag will be included normally.
+            """
+
+            read_our_text = True
+            for control_tag in [start_tag] + start_tag.findParents():
+                control_classes = dict(control_tag.attrs).get('class', '')
+                control_classes = control_classes.split()
+                if 'speak' in control_classes:
+                    break
+                elif 'mute' in control_classes:
+                    read_our_text = False
+                    break
+
+            text_here = ''
+            for content in start_tag.contents:
+                if isinstance(content, basestring):
+                    if read_our_text:
+                        text_here += content
+                else:
+                    text_here += get_text_from_tag(content)
+            return text_here
+
+        text = from_template(get_text_from_tag(tag))
         if not text:
             return
-
-        # Starting with this tag, check for 'speak' and 'mute' control classes
-        # in the hierarchy. The innermost control class takes precedence over
-        # any outer classes. If neither is found, this tag will play normally.
-        for control_tag in [tag] + tag.findParents():
-            control_classes = dict(control_tag.attrs).get('class', '').split()
-            if 'speak' in control_classes:
-                break
-            elif 'mute' in control_classes:
-                return
 
         attr = dict(tag.attrs)
         config = self._addon.config
