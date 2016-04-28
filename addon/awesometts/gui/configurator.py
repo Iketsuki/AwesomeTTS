@@ -52,9 +52,10 @@ class Configurator(Dialog):
         'ellip_template_newlines', 'filenames', 'filenames_human',
         'lame_flags', 'launch_browser_generator', 'launch_browser_stripper',
         'launch_configurator', 'launch_editor_generator', 'launch_templater',
-        'otf_only_revealed_cloze', 'otf_remove_hints', 'spec_note_strip',
-        'spec_note_ellipsize', 'spec_template_ellipsize', 'spec_note_count',
-        'spec_note_count_wrap', 'spec_template_count',
+        'otf_only_revealed_cloze', 'otf_only_revealed_cloze_before',
+        'otf_only_revealed_cloze_after', 'otf_remove_hints',
+        'spec_note_strip', 'spec_note_ellipsize', 'spec_template_ellipsize',
+        'spec_note_count', 'spec_note_count_wrap', 'spec_template_count',
         'spec_template_count_wrap', 'spec_template_strip', 'strip_note_braces',
         'strip_note_brackets', 'strip_note_parens', 'strip_template_braces',
         'strip_template_brackets', 'strip_template_parens', 'sub_note_cloze',
@@ -263,18 +264,51 @@ class Configurator(Dialog):
         layout.setContentsMargins(10, 0, 10, 0)
         layout.addLayout(hor)
 
-        if template_options:
-            hor = QtGui.QHBoxLayout()
-            hor.addWidget(Checkbox("For cloze answers, read revealed text "
-                                   "only", 'otf_only_revealed_cloze'))
-            hor.addWidget(Checkbox("Ignore {{hint}} fields",
-                                   'otf_remove_hints'))
-            layout.addLayout(hor)
-
-        layout.addWidget(Checkbox(
+        convert_newlines = Checkbox(
             "Convert any newline(s) in input into an ellipsis",
             infix.join(['ellip', 'newlines'])
-        ))
+        )
+
+        if template_options:
+            read_rev = Checkbox("For cloze answers, read revealed text only",
+                                'otf_only_revealed_cloze')
+
+            before = QtGui.QSpinBox()
+            before.setObjectName('otf_only_revealed_cloze_before')
+            before.setRange(0, 10)
+            before.setSingleStep(1)
+            before.setSuffix(" word(s)")
+
+            after = QtGui.QSpinBox()
+            after.setObjectName('otf_only_revealed_cloze_after')
+            after.setRange(0, 10)
+            after.setSingleStep(1)
+            after.setSuffix(" word(s)")
+
+            read_rev.stateChanged.connect(lambda enabled: (
+                before.setEnabled(enabled),
+                after.setEnabled(enabled),
+            ))
+
+            layout.addWidget(read_rev)
+
+            hor = QtGui.QHBoxLayout()
+            hor.addWidget(Label("        ... plus"))
+            hor.addWidget(before)
+            hor.addWidget(Label("before and"))
+            hor.addWidget(after)
+            hor.addWidget(Label("after revealed text"))
+            hor.addStretch()
+            layout.addLayout(hor)
+
+            hor = QtGui.QHBoxLayout()
+            hor.addWidget(Checkbox("Ignore {{hint}} fields",
+                                   'otf_remove_hints'))
+            hor.addWidget(convert_newlines)
+            layout.addLayout(hor)
+
+        else:
+            layout.addWidget(convert_newlines)
 
         hor = QtGui.QHBoxLayout()
         hor.addWidget(Label("Strip off text within:"))

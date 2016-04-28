@@ -114,6 +114,8 @@ config = Config(
         ('launch_templater', 'integer', Qt.ControlModifier | Qt.Key_T,
          to.nullable_key, to.nullable_int),
         ('otf_only_revealed_cloze', 'integer', False, to.lax_bool, int),
+        ('otf_only_revealed_cloze_before', 'integer', 0, int, int),
+        ('otf_only_revealed_cloze_after', 'integer', 0, int, int),
         ('otf_remove_hints', 'integer', False, to.lax_bool, int),
         ('presets', 'text', {}, to.deserialized_dict, to.compact_json),
         ('spec_note_count', 'text', '', unicode, unicode),
