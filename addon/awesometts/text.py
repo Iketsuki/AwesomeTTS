@@ -103,7 +103,8 @@ class Sanitizer(object):  # call only, pylint:disable=too-few-public-methods
 
                 if value is True:  # basic on/off config flag
                     if addl:
-                        addl = self._config[addl]
+                        addl = [self._config[addl_key] for addl_key in addl] \
+                            if isinstance(addl, list) else self._config[addl]
                         applied.append((rule, addl))
                         text = getattr(self, '_rule_' + rule)(text, addl)
 
@@ -113,7 +114,8 @@ class Sanitizer(object):  # call only, pylint:disable=too-few-public-methods
 
                 elif value:  # some other truthy value that drives the rule
                     if addl:
-                        addl = self._config[addl]
+                        addl = [self._config[addl_key] for addl_key in addl] \
+                            if isinstance(addl, list) else self._config[addl]
                         applied.append((rule, value, addl))
                         text = getattr(self, '_rule_' + rule)(text, value,
                                                               addl)
