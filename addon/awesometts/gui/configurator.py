@@ -285,15 +285,15 @@ class Configurator(Dialog):
 
             before = QtGui.QSpinBox()
             before.setObjectName('otf_only_revealed_cloze_before')
-            before.setRange(0, 10)
+            before.setRange(0, 20)
             before.setSingleStep(1)
-            before.setSuffix(" word(s)")
+            before.setSuffix(" token(s)")
 
             after = QtGui.QSpinBox()
             after.setObjectName('otf_only_revealed_cloze_after')
-            after.setRange(0, 10)
+            after.setRange(0, 20)
             after.setSingleStep(1)
-            after.setSuffix(" word(s)")
+            after.setSuffix(" token(s)")
 
             read_rev.stateChanged.connect(lambda enabled: (
                 before.setEnabled(enabled),

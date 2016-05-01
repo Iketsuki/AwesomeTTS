@@ -210,7 +210,7 @@ class Sanitizer(object):  # call only, pylint:disable=too-few-public-methods
         """
         Given text that has a revealed cloze span, return only the
         contents of that span, or if before/after context is enabled,
-        the contents of that span plus the necessary words before and
+        the contents of that span plus the necessary tokens before and
         after the matching span.
 
         Note that when used with before/after context, this rule may
@@ -238,8 +238,8 @@ class Sanitizer(object):  # call only, pylint:disable=too-few-public-methods
 
                         if text_before:
                             space_before = text_before[-1].isspace()
-                            words_before = text_before.split()
-                            ctx_before = ' '.join(words_before[-want_before:])
+                            tokens_before = text_before.split()
+                            ctx_before = ' '.join(tokens_before[-want_before:])
                             if space_before:
                                 ctx_before += ' '
                             revealed_text = ctx_before + revealed_text
@@ -249,8 +249,8 @@ class Sanitizer(object):  # call only, pylint:disable=too-few-public-methods
 
                         if text_after:
                             space_after = text_after[0].isspace()
-                            words_after = text_after.split()
-                            ctx_after = ' '.join(words_after[0:want_after])
+                            tokens_after = text_after.split()
+                            ctx_after = ' '.join(tokens_after[0:want_after])
                             if space_after:
                                 ctx_after = ' ' + ctx_after
                             revealed_text += ctx_after
