@@ -266,7 +266,7 @@ addon = Bundle(
     player=player,
     router=router,
     strip=Bundle(
-        # n.b. cloze substitution logic happens first in both modes because:
+        # n.b. cloze substitution logic happens before HTML is stripped as:
         # - we need the <span>...</span> markup in on-the-fly to identify it
         # - Anki won't recognize cloze w/ HTML beginning/ending within braces
         # - the following 'html' rule will cleanse the HTML out anyway
@@ -275,8 +275,8 @@ addon = Bundle(
         # prepopulating a modal input based on some note field, where cloze
         # placeholders are still in their unprocessed state)
         from_note=Sanitizer([
-            ('clozes_braced', 'sub_note_cloze'),
             ('newline_ellipsize', 'ellip_note_newlines'),
+            ('clozes_braced', 'sub_note_cloze'),
             'html',
             'whitespace',
             'sounds_univ',
@@ -295,19 +295,19 @@ addon = Bundle(
         # for cleaning up already-processed HTML templates (e.g. on-the-fly,
         # where cloze is marked with <span class=cloze></span> tags)
         from_template_front=Sanitizer([
-            ('clozes_rendered', 'sub_template_cloze'),
+            ('newline_ellipsize', 'ellip_template_newlines'),
             'hint_links',
             ('hint_content', 'otf_remove_hints'),
-            ('newline_ellipsize', 'ellip_template_newlines'),
+            ('clozes_rendered', 'sub_template_cloze'),
             'html',
         ] + STRIP_TEMPLATE_POSTHTML, config=config, logger=logger),
 
         # like the previous, but for the back sides of cards
         from_template_back=Sanitizer([
-            ('clozes_revealed', 'otf_only_revealed_cloze'),
+            ('newline_ellipsize', 'ellip_template_newlines'),
             'hint_links',
             ('hint_content', 'otf_remove_hints'),
-            ('newline_ellipsize', 'ellip_template_newlines'),
+            ('clozes_revealed', 'otf_only_revealed_cloze'),
             'html',
         ] + STRIP_TEMPLATE_POSTHTML, config=config, logger=logger),
 
@@ -315,12 +315,12 @@ addon = Bundle(
         # n.b. clozes_revealed is not used here without the card context and
         # it would be a weird thing to apply to the clipboard content anyway
         from_unknown=Sanitizer([
-            ('clozes_braced', 'sub_note_cloze'),
-            ('clozes_rendered', 'sub_template_cloze'),
-            'hint_links',
-            ('hint_content', 'otf_remove_hints'),
             ('newline_ellipsize', 'ellip_note_newlines'),
             ('newline_ellipsize', 'ellip_template_newlines'),
+            'hint_links',
+            ('hint_content', 'otf_remove_hints'),
+            ('clozes_braced', 'sub_note_cloze'),
+            ('clozes_rendered', 'sub_template_cloze'),
             'html',
             'html',  # clipboards often have escaped HTML, so we run twice
             'whitespace',

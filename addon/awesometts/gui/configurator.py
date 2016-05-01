@@ -2,9 +2,9 @@
 
 # AwesomeTTS text-to-speech add-on for Anki
 #
-# Copyright (C) 2010-2015  Anki AwesomeTTS Development Team
+# Copyright (C) 2010-2016  Anki AwesomeTTS Development Team
 # Copyright (C) 2010-2012  Arthur Helfstein Fragoso
-# Copyright (C) 2013-2015  Dave Shifflett
+# Copyright (C) 2013-2016  Dave Shifflett
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -255,19 +255,29 @@ class Configurator(Dialog):
             select.addItem(option_text, option_value)
         select.setObjectName(infix.join(['sub', 'cloze']))
 
-        hor = QtGui.QHBoxLayout()
-        hor.addWidget(Label(cloze_description))
-        hor.addWidget(select)
-        hor.addStretch()
-
         layout = QtGui.QVBoxLayout()
         layout.setContentsMargins(10, 0, 10, 0)
-        layout.addLayout(hor)
 
         convert_newlines = Checkbox(
             "Convert any newline(s) in input into an ellipsis",
             infix.join(['ellip', 'newlines'])
         )
+
+        if template_options:
+            hor = QtGui.QHBoxLayout()
+            hor.addWidget(convert_newlines)
+            hor.addWidget(Checkbox("Ignore {{hint}} fields",
+                                   'otf_remove_hints'))
+            layout.addLayout(hor)
+
+        else:
+            layout.addWidget(convert_newlines)
+
+        hor = QtGui.QHBoxLayout()
+        hor.addWidget(Label(cloze_description))
+        hor.addWidget(select)
+        hor.addStretch()
+        layout.addLayout(hor)
 
         if template_options:
             read_rev = Checkbox("For cloze answers, read revealed text only",
@@ -300,15 +310,6 @@ class Configurator(Dialog):
             hor.addWidget(Label("after revealed text"))
             hor.addStretch()
             layout.addLayout(hor)
-
-            hor = QtGui.QHBoxLayout()
-            hor.addWidget(Checkbox("Ignore {{hint}} fields",
-                                   'otf_remove_hints'))
-            hor.addWidget(convert_newlines)
-            layout.addLayout(hor)
-
-        else:
-            layout.addWidget(convert_newlines)
 
         hor = QtGui.QHBoxLayout()
         hor.addWidget(Label("Strip off text within:"))
