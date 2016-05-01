@@ -269,7 +269,12 @@ addon = Bundle(
         # n.b. cloze substitution logic happens before HTML is stripped as:
         # - we need the <span>...</span> markup in on-the-fly to identify it
         # - Anki won't recognize cloze w/ HTML beginning/ending within braces
+        # - if used with before/after context option, HTML in the surrounding
+        #   context will be destroyed for counting words
         # - the following 'html' rule will cleanse the HTML out anyway
+
+        # n.b. hint handling must happen before newline ellipsizing as newline
+        # ellipsizing will destroy the hint field's `div` block
 
         # for content directly from a note field (e.g. BrowserGenerator runs,
         # prepopulating a modal input based on some note field, where cloze
@@ -295,18 +300,18 @@ addon = Bundle(
         # for cleaning up already-processed HTML templates (e.g. on-the-fly,
         # where cloze is marked with <span class=cloze></span> tags)
         from_template_front=Sanitizer([
-            ('newline_ellipsize', 'ellip_template_newlines'),
             'hint_links',
             ('hint_content', 'otf_remove_hints'),
+            ('newline_ellipsize', 'ellip_template_newlines'),
             ('clozes_rendered', 'sub_template_cloze'),
             'html',
         ] + STRIP_TEMPLATE_POSTHTML, config=config, logger=logger),
 
         # like the previous, but for the back sides of cards
         from_template_back=Sanitizer([
-            ('newline_ellipsize', 'ellip_template_newlines'),
             'hint_links',
             ('hint_content', 'otf_remove_hints'),
+            ('newline_ellipsize', 'ellip_template_newlines'),
             (
                 'clozes_revealed',
                 'otf_only_revealed_cloze',
@@ -322,10 +327,10 @@ addon = Bundle(
         # n.b. clozes_revealed is not used here without the card context and
         # it would be a weird thing to apply to the clipboard content anyway
         from_unknown=Sanitizer([
-            ('newline_ellipsize', 'ellip_note_newlines'),
-            ('newline_ellipsize', 'ellip_template_newlines'),
             'hint_links',
             ('hint_content', 'otf_remove_hints'),
+            ('newline_ellipsize', 'ellip_note_newlines'),
+            ('newline_ellipsize', 'ellip_template_newlines'),
             ('clozes_braced', 'sub_note_cloze'),
             ('clozes_rendered', 'sub_template_cloze'),
             'html',

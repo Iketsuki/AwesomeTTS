@@ -265,9 +265,9 @@ class Configurator(Dialog):
 
         if template_options:
             hor = QtGui.QHBoxLayout()
-            hor.addWidget(convert_newlines)
             hor.addWidget(Checkbox("Ignore {{hint}} fields",
                                    'otf_remove_hints'))
+            hor.addWidget(convert_newlines)
             layout.addLayout(hor)
 
         else:
