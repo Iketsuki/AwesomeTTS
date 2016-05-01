@@ -307,7 +307,14 @@ addon = Bundle(
             ('newline_ellipsize', 'ellip_template_newlines'),
             'hint_links',
             ('hint_content', 'otf_remove_hints'),
-            ('clozes_revealed', 'otf_only_revealed_cloze'),
+            (
+                'clozes_revealed',
+                'otf_only_revealed_cloze',
+                [
+                    'otf_only_revealed_cloze_before',
+                    'otf_only_revealed_cloze_after',
+                ],
+            ),
             'html',
         ] + STRIP_TEMPLATE_POSTHTML, config=config, logger=logger),
 

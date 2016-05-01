@@ -2,8 +2,8 @@
 
 # AwesomeTTS text-to-speech add-on for Anki
 #
-# Copyright (C) 2014-2015  Anki AwesomeTTS Development Team
-# Copyright (C) 2014-2015  Dave Shifflett
+# Copyright (C) 2014-2016  Anki AwesomeTTS Development Team
+# Copyright (C) 2014-2016  Dave Shifflett
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ __all__ = ['RE_CLOZE_BRACED', 'RE_CLOZE_RENDERED', 'RE_ELLIPSES',
            'RE_HINT_LINK', 'RE_LINEBREAK_HTML', 'RE_NEWLINEISH', 'RE_SOUNDS',
            'RE_WHITESPACE', 'STRIP_HTML', 'Sanitizer']
 
+from random import random
 import re
 from StringIO import StringIO
 
@@ -205,21 +206,61 @@ class Sanitizer(object):  # call only, pylint:disable=too-few-public-methods
 
     _rule_clozes_rendered.ankier = lambda match: match.group(1)
 
-    def _rule_clozes_revealed(self, text):
+    def _rule_clozes_revealed(self, text, (want_before, want_after)):
         """
         Given text that has a revealed cloze span, return only the
-        contents of that span.
+        contents of that span, or if before/after context is enabled,
+        the contents of that span plus the necessary words before and
+        after the matching span.
+
+        Note that when used with before/after context, this rule may
+        destroy surrounding markup, so following rules should not depend
+        on any markup being present.
         """
 
-        revealed_tags = BeautifulSoup(text)('span', attrs={'class': 'cloze'})
+        soup = BeautifulSoup(text)
+        revealed_tags = soup('span', attrs={'class': 'cloze'})
 
-        return ' ... '.join(
-            ''.join(
-                unicode(content)
-                for content in tag.contents
-            )
-            for tag in revealed_tags
-        ) if revealed_tags else text
+        if revealed_tags:
+            revealed_texts = []
+
+            for i, revealed_tag in enumerate(revealed_tags):
+                revealed_text = revealed_tag.text
+
+                if want_before or want_after:
+                    revealed_tag['id'] = 'split-' + unicode(i + random())
+                    all_html = unicode(soup)
+                    split_html = unicode(revealed_tag)
+                    html_before, html_after = all_html.split(split_html)
+
+                    if want_before and html_before:
+                        text_before = self._rule_html(html_before)
+
+                        if text_before:
+                            space_before = text_before[-1].isspace()
+                            words_before = text_before.split()
+                            ctx_before = ' '.join(words_before[-want_before:])
+                            if space_before:
+                                ctx_before += ' '
+                            revealed_text = ctx_before + revealed_text
+
+                    if want_after and html_after:
+                        text_after = self._rule_html(html_after)
+
+                        if text_after:
+                            space_after = text_after[0].isspace()
+                            words_after = text_after.split()
+                            ctx_after = ' '.join(words_after[0:want_after])
+                            if space_after:
+                                ctx_after = ' ' + ctx_after
+                            revealed_text += ctx_after
+
+                revealed_texts.append(revealed_text)
+
+            return ' ... '.join(revealed_texts)
+
+        else:
+            return text
 
     def _rule_counter(self, text, characters, wrap):
         """
