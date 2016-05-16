@@ -329,14 +329,14 @@ class Configurator(Dialog):
                 until = QtGui.QLineEdit()
                 until.setObjectName('otf_only_revealed_cloze_%s_until' % where)
                 until.setValidator(self._ucsv)
-                until.setFixedWidth(50)
+                until.setFixedWidth(65)
 
                 widgets[where] = dict(spinner=spinner, until=until)
 
                 hor = QtGui.QHBoxLayout()
                 hor.addWidget(Label("        and up to"))
                 hor.addWidget(spinner)
-                hor.addWidget(Label("%s; stop %s word ending in" %
+                hor.addWidget(Label("%s; stop %s word ends in" %
                                     (where, where)))
                 hor.addWidget(until)
                 hor.addStretch()
