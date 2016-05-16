@@ -206,7 +206,8 @@ class Sanitizer(object):  # call only, pylint:disable=too-few-public-methods
 
     _rule_clozes_rendered.ankier = lambda match: match.group(1)
 
-    def _rule_clozes_revealed(self, text, (want_before, want_after)):
+    def _rule_clozes_revealed(self, text, (want_before, want_before_until,
+                                           want_after, want_after_until)):
         """
         Given text that has a revealed cloze span, return only the
         contents of that span, or if before/after context is enabled,
@@ -239,6 +240,12 @@ class Sanitizer(object):  # call only, pylint:disable=too-few-public-methods
                         if text_before:
                             space_before = text_before[-1].isspace()
                             tokens_before = text_before.split()
+                            if want_before_until:
+                                for j, token in reversed(list(enumerate(
+                                        tokens_before))):
+                                    if token[-1] in want_before_until:
+                                        tokens_before = tokens_before[j + 1:]
+                                        break
                             ctx_before = ' '.join(tokens_before[-want_before:])
                             if space_before:
                                 ctx_before += ' '
@@ -250,6 +257,11 @@ class Sanitizer(object):  # call only, pylint:disable=too-few-public-methods
                         if text_after:
                             space_after = text_after[0].isspace()
                             tokens_after = text_after.split()
+                            if want_after_until:
+                                for j, token in enumerate(tokens_after):
+                                    if token[-1] in want_after_until:
+                                        tokens_after = tokens_after[:j + 1]
+                                        break
                             ctx_after = ' '.join(tokens_after[0:want_after])
                             if space_after:
                                 ctx_after = ' ' + ctx_after

@@ -321,7 +321,9 @@ addon = Bundle(
                 'otf_only_revealed_cloze',
                 [
                     'otf_only_revealed_cloze_before',
+                    'otf_only_revealed_cloze_before_until',
                     'otf_only_revealed_cloze_after',
+                    'otf_only_revealed_cloze_after_until',
                 ],
             ),
             'html',
