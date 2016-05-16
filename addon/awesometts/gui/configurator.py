@@ -44,23 +44,56 @@ class Configurator(Dialog):
     """Provides a dialog for configuring the add-on."""
 
     _PROPERTY_KEYS = [
-        'automatic_answers', 'automatic_answers_errors', 'automatic_questions',
-        'automatic_questions_errors', 'cache_days', 'delay_answers_onthefly',
-        'delay_answers_stored_ours', 'delay_answers_stored_theirs',
-        'delay_questions_onthefly', 'delay_questions_stored_ours',
-        'delay_questions_stored_theirs', 'ellip_note_newlines',
-        'ellip_template_newlines', 'filenames', 'filenames_human',
-        'lame_flags', 'launch_browser_generator', 'launch_browser_stripper',
-        'launch_configurator', 'launch_editor_generator', 'launch_templater',
-        'otf_only_revealed_cloze', 'otf_only_revealed_cloze_before',
-        'otf_only_revealed_cloze_after', 'otf_remove_hints',
-        'spec_note_strip', 'spec_note_ellipsize', 'spec_template_ellipsize',
-        'spec_note_count', 'spec_note_count_wrap', 'spec_template_count',
-        'spec_template_count_wrap', 'spec_template_strip', 'strip_note_braces',
-        'strip_note_brackets', 'strip_note_parens', 'strip_template_braces',
-        'strip_template_brackets', 'strip_template_parens', 'sub_note_cloze',
-        'sub_template_cloze', 'sul_note', 'sul_template', 'throttle_sleep',
-        'throttle_threshold', 'tts_key_a', 'tts_key_q', 'updates_enabled',
+        'automatic_answers',
+        'automatic_answers_errors',
+        'automatic_questions',
+        'automatic_questions_errors',
+        'cache_days',
+        'delay_answers_onthefly',
+        'delay_answers_stored_ours',
+        'delay_answers_stored_theirs',
+        'delay_questions_onthefly',
+        'delay_questions_stored_ours',
+        'delay_questions_stored_theirs',
+        'ellip_note_newlines',
+        'ellip_template_newlines',
+        'filenames',
+        'filenames_human',
+        'lame_flags',
+        'launch_browser_generator',
+        'launch_browser_stripper',
+        'launch_configurator',
+        'launch_editor_generator',
+        'launch_templater',
+        'otf_only_revealed_cloze',
+        'otf_only_revealed_cloze_after',
+        'otf_only_revealed_cloze_after_until',
+        'otf_only_revealed_cloze_before',
+        'otf_only_revealed_cloze_before_until',
+        'otf_remove_hints',
+        'spec_note_count',
+        'spec_note_count_wrap',
+        'spec_note_ellipsize',
+        'spec_note_strip',
+        'spec_template_count',
+        'spec_template_count_wrap',
+        'spec_template_ellipsize',
+        'spec_template_strip',
+        'strip_note_braces',
+        'strip_note_brackets',
+        'strip_note_parens',
+        'strip_template_braces',
+        'strip_template_brackets',
+        'strip_template_parens',
+        'sub_note_cloze',
+        'sub_template_cloze',
+        'sul_note',
+        'sul_template',
+        'throttle_sleep',
+        'throttle_threshold',
+        'tts_key_a',
+        'tts_key_q',
+        'updates_enabled',
     ]
 
     _PROPERTY_WIDGETS = (Checkbox, QtGui.QComboBox, QtGui.QLineEdit,
@@ -282,34 +315,43 @@ class Configurator(Dialog):
         if template_options:
             read_rev = Checkbox("For cloze answers, read revealed text only",
                                 'otf_only_revealed_cloze')
-
-            before = QtGui.QSpinBox()
-            before.setObjectName('otf_only_revealed_cloze_before')
-            before.setRange(0, 20)
-            before.setSingleStep(1)
-            before.setSuffix(" token(s)")
-
-            after = QtGui.QSpinBox()
-            after.setObjectName('otf_only_revealed_cloze_after')
-            after.setRange(0, 20)
-            after.setSingleStep(1)
-            after.setSuffix(" token(s)")
-
-            read_rev.stateChanged.connect(lambda enabled: (
-                before.setEnabled(enabled),
-                after.setEnabled(enabled),
-            ))
-
             layout.addWidget(read_rev)
 
-            hor = QtGui.QHBoxLayout()
-            hor.addWidget(Label("        ... plus"))
-            hor.addWidget(before)
-            hor.addWidget(Label("before and"))
-            hor.addWidget(after)
-            hor.addWidget(Label("after revealed text"))
-            hor.addStretch()
-            layout.addLayout(hor)
+            widgets = {}
+
+            for where in ['before', 'after']:
+                spinner = QtGui.QSpinBox()
+                spinner.setObjectName('otf_only_revealed_cloze_' + where)
+                spinner.setRange(0, 20)
+                spinner.setSingleStep(1)
+                spinner.setSuffix(" word(s)")
+
+                until = QtGui.QLineEdit()
+                until.setObjectName('otf_only_revealed_cloze_%s_until' % where)
+                until.setValidator(self._ucsv)
+                until.setFixedWidth(50)
+
+                widgets[where] = dict(spinner=spinner, until=until)
+
+                hor = QtGui.QHBoxLayout()
+                hor.addWidget(Label("        and up to"))
+                hor.addWidget(spinner)
+                hor.addWidget(Label("%s; stop %s word ending in" %
+                                    (where, where)))
+                hor.addWidget(until)
+                hor.addStretch()
+                layout.addLayout(hor)
+
+            def widget_updater():
+                for where in ['before', 'after']:
+                    widgets[where]['spinner'].setEnabled(read_rev.isChecked())
+                    widgets[where]['until'].setEnabled(
+                        read_rev.isChecked() and
+                        widgets[where]['spinner'].value() > 0
+                    )
+            read_rev.stateChanged.connect(widget_updater)
+            for where in ['before', 'after']:
+                widgets[where]['spinner'].valueChanged.connect(widget_updater)
 
         hor = QtGui.QHBoxLayout()
         hor.addWidget(Label("Strip off text within:"))
@@ -336,7 +378,7 @@ class Configurator(Dialog):
 
         line_edit = QtGui.QLineEdit()
         line_edit.setObjectName(infix.join(['spec', suffix]))
-        line_edit.setValidator(self._ui_tabs_text_mode_simple_spec.ucsv)
+        line_edit.setValidator(self._ucsv)
         line_edit.setFixedWidth(50)
 
         hor = QtGui.QHBoxLayout()
@@ -363,7 +405,7 @@ class Configurator(Dialog):
             filtered = self.fixup(original)
             return QtGui.QValidator.Acceptable, filtered, len(filtered)
 
-    _ui_tabs_text_mode_simple_spec.ucsv = _UniqueCharacterStringValidator()
+    _ucsv = _UniqueCharacterStringValidator()
 
     def _ui_tabs_text_mode_adv(self, infix):
         """
