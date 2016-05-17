@@ -119,7 +119,7 @@ class VoiceText(Service):
 
     def run(self, text, options, path):
         """
-        Downloads from VoiceText to an AAC file, then transcodes that
+        Downloads from VoiceText to an OGG file, then transcodes that
         into an MP3 via mplayer and lame.
 
         If the input text is longer than 100 characters, it will be
@@ -127,13 +127,13 @@ class VoiceText(Service):
         together into a single MP3.
         """
 
-        aac_paths = []
+        ogg_paths = []
         wav_paths = []
         mp3_paths = []
 
         parameters = dict(
             speaker=options['voice'],
-            format='aac',
+            format='ogg',
             # emotion_level=options['intensity'],
             speed=options['speed'],
             pitch=options['pitch'],
@@ -159,17 +159,17 @@ class VoiceText(Service):
                 # the URL so we can get direct access to HTTP status codes from
                 # net_download() (e.g. if our VoiceText proxy rejects the call)
 
-                aac_path = self.path_temp('aac')
-                aac_paths.append(aac_path)
+                ogg_path = self.path_temp('ogg')
+                ogg_paths.append(ogg_path)
                 parameters['text'] = subtext
-                self.net_download(aac_path,
+                self.net_download(ogg_path,
                                   (api_endpoint, parameters),
-                                  require=dict(mime='audio/aac', size=256),
+                                  require=dict(mime='audio/ogg', size=256),
                                   awesome_ua=True)
 
                 wav_path = self.path_temp('wav')
                 wav_paths.append(wav_path)
-                self.net_dump(wav_path, aac_path)
+                self.net_dump(wav_path, ogg_path)
 
             if len(wav_paths) > 1:
                 for wav_path in wav_paths:
@@ -182,4 +182,4 @@ class VoiceText(Service):
                 self.cli_transcode(wav_paths[0], path)
 
         finally:
-            self.path_unlink(aac_paths, wav_paths, mp3_paths)
+            self.path_unlink(ogg_paths, wav_paths, mp3_paths)
