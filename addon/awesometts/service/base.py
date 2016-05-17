@@ -632,7 +632,8 @@ class Service(object):
         directory workaround like cli_transcode() does.
         """
 
-        self._netops += 1
+        if url.startswith('http'):
+            self._netops += 1
 
         try:
             self.cli_call(
