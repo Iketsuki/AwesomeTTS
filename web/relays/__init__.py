@@ -27,6 +27,7 @@ APIs that require authenticated access).
 """
 
 from json import dumps as _json
+from logging import error as _error, warning as _warn
 from urllib2 import urlopen as _url_open, Request as _Request
 
 __all__ = ['voicetext']
@@ -70,10 +71,12 @@ def voicetext(environ, start_response):
     """
 
     if not environ.get('HTTP_USER_AGENT', '').startswith(_AWESOMETTS):
+        _warn("Relay denied -- unauthorized user agent")
         start_response(_CODE_403, _HEADERS_JSON)
         return _MSG_DENIED
 
     if environ.get('REQUEST_METHOD') != 'GET':
+        _warn("Relay denied -- unacceptable request method")
         start_response(_CODE_405, _HEADERS_JSON)
         return _MSG_UNACCEPTABLE
 
@@ -86,6 +89,7 @@ def voicetext(environ, start_response):
             data.count('=') < 8 and 'format=wav' in data and
             'pitch=' in data and 'speaker=' in data and 'speed=' in data and
             'text=' in data and 'volume=' in data):
+        _warn("Relay denied -- unacceptable query string")
         start_response(_CODE_400, _HEADERS_JSON)
         return _MSG_UNACCEPTABLE
 
@@ -94,18 +98,25 @@ def voicetext(environ, start_response):
                                       _API_VOICETEXT_AUTH),
                              timeout=_API_VOICETEXT_TIMEOUT)
 
-        if not (response.getcode() == 200 and
-                response.info().gettype() == 'audio/wave'):
-            response.close()
-            raise IOError
+        if response.getcode() != 200:
+            raise IOError("non-200 status code from upstream service")
+
+        if response.info().gettype() != 'audio/wave':
+            raise IOError("non-audio/wave format from upstream service")
 
         payload = [response.read()]
-        response.close()
 
-    except:  # catch absolutely anything, pylint:disable=bare-except
+    except Exception as exception:  # catch all, pylint:disable=broad-except
+        _error("Relay failed -- %s", exception)
         start_response(_CODE_502, _HEADERS_JSON)
         return _MSG_UPSTREAM
 
     else:
         start_response(_CODE_200, _HEADERS_WAVE)
         return payload
+
+    finally:
+        try:
+            response.close()
+        except Exception:  # catch all, pylint:disable=broad-except
+            pass
