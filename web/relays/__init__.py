@@ -2,8 +2,8 @@
 
 # AwesomeTTS text-to-speech add-on website
 #
-# Copyright (C) 2015       Anki AwesomeTTS Development Team
-# Copyright (C) 2015       Dave Shifflett
+# Copyright (C) 2015-2016  Anki AwesomeTTS Development Team
+# Copyright (C) 2015-2016  Dave Shifflett
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -51,7 +51,7 @@ _CODE_405 = '405 Method Not Allowed'
 _CODE_502 = '502 Bad Gateway'
 
 _HEADERS_JSON = [('Content-Type', 'application/json')]
-_HEADERS_WAVE = [('Content-Type', 'audio/wave')]
+_HEADERS_AAC = [('Content-Type', 'audio/aac')]
 
 
 def _get_message(msg):
@@ -65,7 +65,7 @@ _MSG_UPSTREAM = _get_message("Cannot communicate with upstream service")
 
 def voicetext(environ, start_response):
     """
-    After validating the incoming request, retrieve the wave file from
+    After validating the incoming request, retrieve the AAC file from
     the upstream VoiceText service, check it, and return it.
     """
 
@@ -83,7 +83,7 @@ def voicetext(environ, start_response):
     # remember that most Japanese characters encode to 9-byte strings and we
     # allow up to 100 Japanese characters (or 900 bytes) in the client
     if not (data and len(data) < 1000 and data.count('&') > 4 and
-            data.count('=') < 8 and 'format=wav' in data and
+            data.count('=') < 8 and 'format=aac' in data and
             'pitch=' in data and 'speaker=' in data and 'speed=' in data and
             'text=' in data and 'volume=' in data):
         start_response(_CODE_400, _HEADERS_JSON)
@@ -95,7 +95,7 @@ def voicetext(environ, start_response):
                              timeout=_API_VOICETEXT_TIMEOUT)
 
         if not (response.getcode() == 200 and
-                response.info().gettype() == 'audio/wave'):
+                response.info().gettype() == 'audio/aac'):
             response.close()
             raise IOError
 
@@ -107,5 +107,5 @@ def voicetext(environ, start_response):
         return _MSG_UPSTREAM
 
     else:
-        start_response(_CODE_200, _HEADERS_WAVE)
+        start_response(_CODE_200, _HEADERS_AAC)
         return payload
