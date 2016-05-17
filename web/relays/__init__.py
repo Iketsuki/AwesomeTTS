@@ -29,83 +29,22 @@ APIs that require authenticated access).
 __all__ = ['voicetext']
 
 from json import dumps as _json
-from urllib2 import urlopen as _url_open, Request as _Request
 
 
-# n.b. When adding additional mustached-in variables, add a build-time check
-# for `KEYS_RELAYS_MISSING` in ../Gruntfile.js so nothing gets missed during a
-# deployment.
-
-# For auth, VoiceText uses API key as the "username" w/ blank password, e.g.:
-# import base64; 'Basic ' + base64.encodestring('someapikey123' + ':').strip()
-_API_VOICETEXT_AUTH = dict(Authorization='{{{voicetext}}}')
-_API_VOICETEXT_ENDPOINT = 'https://api.voicetext.jp/v1/tts'
-_API_VOICETEXT_TIMEOUT = 10
-
-_AWESOMETTS = 'AwesomeTTS/'
-
-_CODE_200 = '200 OK'
-_CODE_400 = '400 Bad Request'
-_CODE_403 = '403 Forbidden'
-_CODE_405 = '405 Method Not Allowed'
-_CODE_502 = '502 Bad Gateway'
+_CODE_503 = '503 Service Unavailable'
 
 _HEADERS_JSON = [('Content-Type', 'application/json')]
-_HEADERS_WAVE = [('Content-Type', 'audio/wave')]
 
 
 def _get_message(msg):
     "Returns a list-of-one-string payload for returning from handlers."
     return [_json(dict(message=msg), separators=(',', ':'))]
 
-_MSG_DENIED = _get_message("You may not call this endpoint directly")
-_MSG_UNACCEPTABLE = _get_message("Your request is unacceptable")
-_MSG_UPSTREAM = _get_message("Cannot communicate with upstream service")
+_MSG_UNAVAILABLE = _get_message("VoiceText access is temporarily unavailable")
 
 
 def voicetext(environ, start_response):
-    """
-    After validating the incoming request, retrieve the wave file from
-    the upstream VoiceText service, check it, and return it.
-    """
+    """Return an HTTP 503."""
 
-    if not environ.get('HTTP_USER_AGENT', '').startswith(_AWESOMETTS):
-        start_response(_CODE_403, _HEADERS_JSON)
-        return _MSG_DENIED
-
-    if environ.get('REQUEST_METHOD') != 'GET':
-        start_response(_CODE_405, _HEADERS_JSON)
-        return _MSG_UNACCEPTABLE
-
-    data = environ.get('QUERY_STRING')
-
-    # do a very rough sanity check without generating a bunch of junk objects;
-    # remember that most Japanese characters encode to 9-byte strings and we
-    # allow up to 100 Japanese characters (or 900 bytes) in the client
-    if not (data and len(data) < 1000 and data.count('&') > 4 and
-            data.count('=') < 8 and 'format=wav' in data and
-            'pitch=' in data and 'speaker=' in data and 'speed=' in data and
-            'text=' in data and 'volume=' in data):
-        start_response(_CODE_400, _HEADERS_JSON)
-        return _MSG_UNACCEPTABLE
-
-    try:
-        response = _url_open(_Request(_API_VOICETEXT_ENDPOINT, data,
-                                      _API_VOICETEXT_AUTH),
-                             timeout=_API_VOICETEXT_TIMEOUT)
-
-        if not (response.getcode() == 200 and
-                response.info().gettype() == 'audio/wave'):
-            response.close()
-            raise IOError
-
-        payload = [response.read()]
-        response.close()
-
-    except:  # catch absolutely anything, pylint:disable=bare-except
-        start_response(_CODE_502, _HEADERS_JSON)
-        return _MSG_UPSTREAM
-
-    else:
-        start_response(_CODE_200, _HEADERS_WAVE)
-        return payload
+    start_response(_CODE_503, _HEADERS_JSON)
+    return _MSG_UNAVAILABLE
