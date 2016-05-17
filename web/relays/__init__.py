@@ -2,8 +2,8 @@
 
 # AwesomeTTS text-to-speech add-on website
 #
-# Copyright (C) 2015       Anki AwesomeTTS Development Team
-# Copyright (C) 2015       Dave Shifflett
+# Copyright (C) 2015-2016  Anki AwesomeTTS Development Team
+# Copyright (C) 2015-2016  Dave Shifflett
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,10 +26,10 @@ services that cannot be communicated with directly (e.g. text-to-speech
 APIs that require authenticated access).
 """
 
-__all__ = ['voicetext']
-
 from json import dumps as _json
 from urllib2 import urlopen as _url_open, Request as _Request
+
+__all__ = ['voicetext']
 
 
 # n.b. When adding additional mustached-in variables, add a build-time check
