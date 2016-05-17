@@ -2,8 +2,8 @@
 
 # AwesomeTTS text-to-speech add-on for Anki
 #
-# Copyright (C) 2015       Anki AwesomeTTS Development Team
-# Copyright (C) 2015       Dave Shifflett
+# Copyright (C) 2015-2016  Anki AwesomeTTS Development Team
+# Copyright (C) 2015-2016  Dave Shifflett
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -119,20 +119,21 @@ class VoiceText(Service):
 
     def run(self, text, options, path):
         """
-        Downloads from VoiceText to a wave file, then transcodes that
-        into an MP3 via lame.
+        Downloads from VoiceText to an AAC file, then transcodes that
+        into an MP3 via mplayer and lame.
 
         If the input text is longer than 100 characters, it will be
         split across multiple requests, transcoded, then merged back
         together into a single MP3.
         """
 
+        aac_paths = []
         wav_paths = []
         mp3_paths = []
 
         parameters = dict(
             speaker=options['voice'],
-            format='wav',
+            format='aac',
             # emotion_level=options['intensity'],
             speed=options['speed'],
             pitch=options['pitch'],
@@ -153,13 +154,22 @@ class VoiceText(Service):
             api_endpoint = self.ecosystem.web + '/api/voicetext'
 
             for subtext in self.util_split(text, 100):
+                # n.b. We call net_dump() using a local file path after calling
+                # net_download() instead of just calling net_dump() directly w/
+                # the URL so we can get direct access to HTTP status codes from
+                # net_download() (e.g. if our VoiceText proxy rejects the call)
+
+                aac_path = self.path_temp('aac')
+                aac_paths.append(aac_path)
+                parameters['text'] = subtext
+                self.net_download(aac_path,
+                                  (api_endpoint, parameters),
+                                  require=dict(mime='audio/aac', size=256),
+                                  awesome_ua=True)
+
                 wav_path = self.path_temp('wav')
                 wav_paths.append(wav_path)
-                parameters['text'] = subtext
-                self.net_download(wav_path,
-                                  (api_endpoint, parameters),
-                                  require=dict(mime='audio/wave', size=2048),
-                                  awesome_ua=True)
+                self.net_dump(wav_path, aac_path)
 
             if len(wav_paths) > 1:
                 for wav_path in wav_paths:
@@ -172,4 +182,4 @@ class VoiceText(Service):
                 self.cli_transcode(wav_paths[0], path)
 
         finally:
-            self.path_unlink(wav_paths, mp3_paths)
+            self.path_unlink(aac_paths, wav_paths, mp3_paths)
