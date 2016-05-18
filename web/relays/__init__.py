@@ -52,7 +52,6 @@ _CODE_405 = '405 Method Not Allowed'
 _CODE_502 = '502 Bad Gateway'
 
 _HEADERS_JSON = [('Content-Type', 'application/json')]
-_HEADERS_WAVE = [('Content-Type', 'audio/wave')]
 
 
 def _get_message(msg):
@@ -66,7 +65,7 @@ _MSG_UPSTREAM = _get_message("Cannot communicate with upstream service")
 
 def voicetext(environ, start_response):
     """
-    After validating the incoming request, retrieve the wave file from
+    After validating the incoming request, retrieve the audio file from
     the upstream VoiceText service, check it, and return it.
     """
 
@@ -86,7 +85,7 @@ def voicetext(environ, start_response):
     # remember that most Japanese characters encode to 9-byte strings and we
     # allow up to 100 Japanese characters (or 900 bytes) in the client
     if not (data and len(data) < 1000 and data.count('&') > 4 and
-            data.count('=') < 8 and 'format=wav' in data and
+            data.count('=') < 8 and 'format=' in data and
             'pitch=' in data and 'speaker=' in data and 'speed=' in data and
             'text=' in data and 'volume=' in data):
         _warn("Relay denied -- unacceptable query string")
@@ -101,8 +100,9 @@ def voicetext(environ, start_response):
         if response.getcode() != 200:
             raise IOError("non-200 status code from upstream service")
 
-        if response.info().gettype() != 'audio/wave':
-            raise IOError("non-audio/wave format from upstream service")
+        mime = response.info().gettype()
+        if not mime.startswith('audio/'):
+            raise IOError("non-audio format from upstream service")
 
         payload = [response.read()]
 
@@ -112,7 +112,7 @@ def voicetext(environ, start_response):
         return _MSG_UPSTREAM
 
     else:
-        start_response(_CODE_200, _HEADERS_WAVE)
+        start_response(_CODE_200, [('Content-Type', mime)])
         return payload
 
     finally:
