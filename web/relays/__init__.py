@@ -26,8 +26,11 @@ services that cannot be communicated with directly (e.g. text-to-speech
 APIs that require authenticated access).
 """
 
+from collections import namedtuple as _namedtuple
 from json import dumps as _json
 from logging import error as _error, warning as _warn
+from threading import Lock as _Lock
+from time import time as _time
 from urllib2 import urlopen as _url_open, Request as _Request
 
 __all__ = ['voicetext']
@@ -49,7 +52,9 @@ _CODE_200 = '200 OK'
 _CODE_400 = '400 Bad Request'
 _CODE_403 = '403 Forbidden'
 _CODE_405 = '405 Method Not Allowed'
+_CODE_429 = '429 Too Many Requests'
 _CODE_502 = '502 Bad Gateway'
+_CODE_503 = '503 Service Unavailable'
 
 _HEADERS_JSON = [('Content-Type', 'application/json')]
 
@@ -58,9 +63,34 @@ def _get_message(msg):
     "Returns a list-of-one-string payload for returning from handlers."
     return [_json(dict(message=msg), separators=(',', ':'))]
 
+_MSG_CAPACITY = _get_message("This service is over capacity")
 _MSG_DENIED = _get_message("You may not call this endpoint directly")
+_MSG_TOO_MANY = _get_message("You have made too many calls to the service")
 _MSG_UNACCEPTABLE = _get_message("Your request is unacceptable")
 _MSG_UPSTREAM = _get_message("Cannot communicate with upstream service")
+
+
+# Rate limiting for this running instance. Each tuple contains the following:
+#
+# 0. within these number of seconds (or until instance dies, if sooner) ...
+# 1. ... a single IP address may make at most this many calls
+# 2. ... at most this many IP addresses may be using relays
+# 3. accounting dict mapping IP addresses to their access information
+#
+# TODO: If we add additional relay services in the future, those relays should
+# use this same structure (i.e. rate-limiting should be in-effect across all
+# of the relays that we sponsor).
+#
+# TODO: If we ever expand to having more than one running instance on Google
+# App Engine, this data structure would not be shared between them, and this
+# rate-limiting strategy would need to be reconsidered.
+
+# pylint:disable=invalid-name
+_LimitLevel = _namedtuple('LimitLevel',
+                          ['within', 'max_single', 'max_total', 'lookup'])
+_limit_levels = [_LimitLevel(60, 25, 5, {}), _LimitLevel(86400, 500, 100, {})]
+_limit_lock = _Lock()
+# pylint:enable=invalid-name
 
 
 def voicetext(environ, start_response):
@@ -68,6 +98,12 @@ def voicetext(environ, start_response):
     After validating the incoming request, retrieve the audio file from
     the upstream VoiceText service, check it, and return it.
     """
+
+    remote_addr = environ.get('REMOTE_ADDR', '')
+    if not remote_addr:
+        _warn("Relay denied -- no remote IP address")
+        start_response(_CODE_403, _HEADERS_JSON)
+        return _MSG_DENIED
 
     if not environ.get('HTTP_USER_AGENT', '').startswith(_AWESOMETTS):
         _warn("Relay denied -- unauthorized user agent")
@@ -91,6 +127,47 @@ def voicetext(environ, start_response):
         _warn("Relay denied -- unacceptable query string")
         start_response(_CODE_400, _HEADERS_JSON)
         return _MSG_UNACCEPTABLE
+
+    # apply rate-limiting
+    with _limit_lock:
+        now = int(_time())
+
+        # remove expired entries
+        for level in _limit_levels:
+            expired = now - level.within
+            lookup = level.lookup
+            for addr, info in lookup.items():
+                if info['created'] < expired:
+                    del lookup[addr]
+
+        # check maximum levels
+        for level in _limit_levels:
+            lookup = level.lookup
+            try:
+                info = lookup[remote_addr]
+            except KeyError:
+                total = len(lookup)
+                if total >= level.max_total:
+                    _warn("Relay denied -- already have %d total callers "
+                          "within the last %d seconds", total, level.within)
+                    start_response(_CODE_503, _HEADERS_JSON)
+                    return _MSG_CAPACITY
+            else:
+                calls = info['calls']
+                if calls >= level.max_single:
+                    _warn("Relay denied -- already had %d individual calls "
+                          "from %s within the last %d seconds",
+                          calls, remote_addr, level.within)
+                    start_response(_CODE_429, _HEADERS_JSON)
+                    return _MSG_TOO_MANY
+
+        # caller is good to go; update their call counts
+        for level in _limit_levels:
+            lookup = level.lookup
+            try:
+                lookup[remote_addr]['calls'] += 1
+            except KeyError:
+                lookup[remote_addr] = {'created': now, 'calls': 1}
 
     try:
         response = _url_open(_Request(_API_VOICETEXT_ENDPOINT, data,
