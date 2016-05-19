@@ -28,7 +28,7 @@ APIs that require authenticated access).
 
 from collections import namedtuple as _namedtuple
 from json import dumps as _json
-from logging import error as _error, warning as _warn
+from logging import error as _error, info as _info, warning as _warn
 from threading import Lock as _Lock
 from time import time as _time
 from urllib2 import urlopen as _url_open, Request as _Request
@@ -162,12 +162,20 @@ def voicetext(environ, start_response):
                     return _MSG_TOO_MANY
 
         # caller is good to go; update their call counts
+        summaries = []
         for level in _limit_levels:
             lookup = level.lookup
             try:
-                lookup[remote_addr]['calls'] += 1
+                info = lookup[remote_addr]
             except KeyError:
-                lookup[remote_addr] = {'created': now, 'calls': 1}
+                lookup[remote_addr] = info = {'created': now, 'calls': 1}
+            else:
+                info['calls'] += 1
+            summaries.append("%d-second window has %d/%d individual calls for "
+                             "%s and %d/%d total unique callers" %
+                             (level.within, info['calls'], level.max_single,
+                              remote_addr, len(lookup), level.max_total))
+        _info("Relay accepted -- %s", "; ".join(summaries))
 
     try:
         response = _url_open(_Request(_API_VOICETEXT_ENDPOINT, data,
